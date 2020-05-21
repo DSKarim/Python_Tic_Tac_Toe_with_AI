@@ -1,0 +1,216 @@
+# Tic-Tac-Toe with AI
+# input commands : exit for exit, start P1 P2 with P1, P2 could be user, easy or medium
+# easy level : random generating
+# medium level : random generating with 'next move wins' check
+# hard level : get the best move using Minimax algorithm
+import random
+import math
+
+
+def print_game(game_state):  # print game state
+    start_end_line = '---------'
+    example_line = ['|', ' ', ' ', ' ', '|']
+    char_list = list(game_state)
+    i = 0
+    j = 1
+    print(start_end_line)
+    while i < 9:
+        if j < 4:
+            example_line[j] = char_list[i]
+            j += 1
+        if j == 4:
+            print(" ".join(example_line))
+            j = 1
+        i += 1
+    print(start_end_line)
+
+
+def check_line(gsm, p):  # Check if p sign wins in line / gsm : game state matrix
+    for i in range(3):
+        j = 0
+        if gsm[i][j] == gsm[i][j + 1] == gsm[i][j + 2] == p:
+            return True
+
+
+def check_column(gsm, p):  # Check if p sign wins in column / gsm : game state matrix
+    for j in range(3):
+        i = 0
+        if gsm[i][j] == gsm[i + 1][j] == gsm[i + 2][j] == p:
+            return True
+
+
+def check_diagonal(gsm, p):  # Check if p sign wins in diagonal / gsm : game state matrix
+    if gsm[0][0] == gsm[1][1] == gsm[2][2] == p or gsm[2][0] == gsm[1][1] == gsm[0][2] == p:
+        return True
+
+
+def get_winners(gsm, p, o):  # Check if player/opponent sign wins in line, column, diagonal / gsm : game state matrix
+    winners = ''
+    if check_line(gsm, p) or check_column(gsm, p) or check_diagonal(gsm, p):
+        winners += p
+    if check_line(gsm, o) or check_column(gsm, o) or check_diagonal(gsm, o):
+        winners += o
+    return winners
+
+
+def check_win(game_state, x='X', o='O'):  # Check and return game result
+    # turn input into matrix
+    char_list = list(game_state)
+    matrix = [[], [], []]
+    k = 0
+    i = 0
+    while i < len(char_list):
+        matrix[k].append(char_list[i])
+        i += 1
+        if i % 3 == 0:
+            k += 1
+    # check who win and return result
+    winners = get_winners(matrix, x, o)
+    # if abs(game_state.count('X') - game_state.count('O')) > 1:  # neither possible, the game is turn by turn
+    #     return 'Impossible'
+    if ' ' in game_state:
+        if x in winners and o in winners:
+            return 'Impossible'
+        elif x in winners:
+            return 'X wins'
+        elif o in winners:
+            return 'O wins'
+        else:
+            return 'Game not finished'
+    else:
+        if x not in winners and o not in winners:
+            return 'Draw'
+        if x in winners and o in winners:
+            return 'Impossible'
+        elif x in winners:
+            return 'X wins'
+        elif o in winners:
+            return 'O wins'
+
+
+def use_coordinates(game_state, coordinates, p):  # check if coordinates are good and return the new matrix as string
+    coordinates_dict = {'13': 0, '23': 1, '33': 2, '12': 3, '22': 4, '32': 5, '11': 6, '21': 7, '31': 8}
+    char_list = list(game_state)
+    if not (coordinates[0].isnumeric() and coordinates[1].isnumeric()):
+        print('You should enter numbers!')
+    elif not (0 <= int(coordinates[0]) <= 3 and 0 <= int(coordinates[1]) <= 3):
+        print('Coordinates should be from 1 to 3!')
+    elif not(char_list[int(coordinates_dict[''.join(coordinates)])] == ' '):
+        print('This cell is occupied! Choose another one!')
+    else:
+        char_list[int(coordinates_dict[''.join(coordinates)])] = p
+    return ''.join(char_list)
+
+
+def empty_coordinates_list(game_state):
+    coordinates_dict = {0: '13', 1: '23', 2: '33', 3: '12', 4: '22', 5: '32', 6: '11', 7: '21', 8: '31'}
+    coordinates_list = []
+    char_list = list(game_state)
+    for c, value in enumerate(char_list):
+        if value == ' ':
+            coordinates_list.append(coordinates_dict[c])
+    return coordinates_list
+
+
+def check_command(user_input):
+    if len(user_input) == 3:
+        if user_input[0] == 'start' and user_input[1] in ['easy', 'user', 'medium', 'hard'] \
+                and user_input[2] in ['easy', 'user', 'medium', 'hard']:
+            return True
+        else:
+            return False
+    else:
+        return False
+
+
+def minimax(g_m, coordinates, act_sign, op_sign, depth, is_maximizing):
+    # user minimax algorithm to get the best move
+    if act_sign in check_win(use_coordinates(g_m, list(coordinates), act_sign)):
+        return 100 - depth
+    elif op_sign in check_win(use_coordinates(g_m, list(coordinates), op_sign)):
+        return 100 - depth
+    elif ' ' not in g_m:
+        return 0
+
+    new_g_m = use_coordinates(g_m, list(coordinates), act_sign)
+    new_av_coord = empty_coordinates_list(new_g_m)
+    if is_maximizing:
+        best_score = - math.inf
+        for c in new_av_coord:
+            score = minimax(new_g_m, list(c), act_sign, op_sign, depth + 1, False)
+            best_score = max(best_score, score)
+    else:
+        best_score = math.inf
+        for c in new_av_coord:
+            score = minimax(new_g_m, list(c), act_sign, op_sign, depth + 1, True)
+            best_score = min(best_score, score)
+    return best_score
+
+
+def gen_coordinates(av_coord, difficulty, act_sign, g_m):  # generate coordinates by difficulty
+    op_sign = 'X' if act_sign == 'O' else 'O'
+    if difficulty == 'easy':
+        return list(random.choice(av_coord))
+    elif difficulty == 'medium':
+        for c in av_coord:
+            if 'wins' in check_win(use_coordinates(g_m, list(c), op_sign)):
+                return list(c)
+            elif 'wins' in check_win(use_coordinates(g_m, list(c), act_sign)):
+                return list(c)
+        return list(random.choice(av_coord))
+    elif difficulty == 'hard':
+        best_move = list(random.choice(av_coord))
+        if len(av_coord) > 7 and '22' in av_coord:
+            best_move = list('22')
+        else:
+            best_score = - math.inf
+            for c in av_coord:
+                score = minimax(g_m, list(c), act_sign, op_sign, 0, False)
+                if score > best_score:
+                    best_score = score
+                    best_move = list(c)
+        return best_move
+
+
+while True:
+    command_input = input('Input command:').split()
+    if 'exit' in command_input:
+        break
+    elif check_command(command_input):
+        # game matrix initialization
+        game_matrix = '         '
+        print_game(game_matrix)
+        sign_turn = 'X'  # X starts game
+        player_turn = command_input[1]  # first player starts the game
+        all_coordinates = ['11', '12', '13', '21', '22', '23', '31', '32', '33']
+        used_coordinates = []
+        new_used_coordinates = []
+        while True:  # game loop
+            if player_turn == 'user':
+                coordinates_input = input('Enter the coordinates:').split()
+                new_game_matrix = use_coordinates(game_matrix, coordinates_input, sign_turn)
+                while new_game_matrix == game_matrix:  # check if game matrix changed or ask again for input if error
+                    coordinates_input = input('Enter the coordinates:').split()
+                    new_game_matrix = use_coordinates(game_matrix, coordinates_input, sign_turn)
+                game_matrix = new_game_matrix
+            else:
+                print('Making move level "{}"'.format(player_turn))
+                # randomly choose coordinate from left available ones
+                available_coordinates = list(set(all_coordinates) - set(used_coordinates))
+                coordinates_input = gen_coordinates(available_coordinates, player_turn, sign_turn, game_matrix)
+                game_matrix = use_coordinates(game_matrix, coordinates_input, sign_turn)
+
+            used_coordinates.append(''.join(coordinates_input))  # append already used coordinates list
+            print_game(game_matrix)
+            result = check_win(game_matrix)
+            if 'Game not finished' in result:
+                pass
+            else:
+                print(result)
+                break
+            # change player turn
+            sign_turn = 'X' if sign_turn == 'O' else 'O'
+            # change player turn
+            player_turn = command_input[1] if player_turn == command_input[2] else command_input[2]
+    else:
+        print('Bad parameters!')
